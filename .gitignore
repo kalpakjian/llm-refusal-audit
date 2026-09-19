@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+test_results.json
+test_report.md
+calibration_plot.png
+out_*/
+mock_out*/
+real_out*/
+*_run.log
+*_run.err
+.venv/
+venv/
