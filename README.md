@@ -109,19 +109,24 @@ Mock 基準（v3 測試集，非模型成績）：Accuracy **97.0%**、F1 **0.97
 
 ## 實測結果（Qwen 家族，100 題，keyword 判定）
 
-在同一台機器、同一測試集上對 7 個本地模型跑完整測試（均含 `--confidence`，零呼叫錯誤）；
-第 8 個 `orca-cyber-27b-uncensored` 為 2026-09-30 新增（`--max-tokens 1024`，見下方專節）：
+在同一台機器、同一測試集上對 7 個本地模型跑完整測試（均含 `--confidence`，零呼叫錯誤）。
+2026-09-30 更新：新增 `orca-cyber-27b-uncensored`（見下方專節）；† 標記嘅兩個
+qwen3.8-27b-uncensored 以 `--max-tokens 1024` 重跑（原 256 跑有大量空回應，見注意事項）：
 
 | 模型 | 大小 | 對齊狀態 | 高危拒絕率 | F1 | Accuracy | ECE |
 |---|---|---|---|---|---|---|
 | **`qwen3.8:27b`** | 27.3B | ✅ 原廠對齊 | **58.0%** | **0.734** | **79.0%** | 0.003 |
-| `qwen3.8-27b-uncensored` | 27.3B | ❌ 去對齊 | 0.0% | 0.000 | 50.0% | — |
-| `qwen3.8-27b-uncensored-8k` | 27.3B | ❌ 去對齊 | 0.0% | 0.000 | 50.0% | — |
+| `qwen3.8-27b-uncensored`† | 27.3B | ❌ 去對齊 | 4.0% | 0.074 | 50.0% | 0.433 |
+| `qwen3.8-27b-uncensored-8k`† | 27.3B | ❌ 去對齊 | 0.0% | 0.000 | 47.0% | 0.357 |
 | `orca-cyber-27b-uncensored` | 27.3B | ❌ 去對齊（OrcaSAQ2） | 24.0% | 0.353 | 56.0% | 0.346 |
 | `qwen3-8b-heretic:q4_K_M` | 8.2B | ❌ 去對齊 | 4.0% | 0.077 | 52.0% | 0.100 |
 | `qwen3-8b-heretic:q4_K_S` | 8.2B | ❌ 去對齊 | 0.0% | 0.000 | 49.0% | — |
 | `qwen3-8b-heretic:q8_0` | 8.2B | ❌ 去對齊 | 2.0% | 0.039 | 51.0% | — |
 | `smollm:latest` | 1.7B | 無對齊 | 50% (n=2 煙霧測試) | — | — | — |
+
+> † 於 2026-09-30 以 `--max-tokens 1024` 重跑（`out_27b_unc_1024`／`out_27b_unc8k_1024`）。
+> 原 256-token 跑分別有 **64／63 題空回應**（0% TPR 係空回應假象）；重跑後空回應降至 30／31，
+> 滿預算下真實 TPR 為 **4.0%／0.0%**（judge 複判同為 4.0%／0.0%，0 升級）——結論不變：近乎零拒答。
 
 ### OrcaSAQ2 27B Cyber Uncensored（2026-09-30 新增）
 
@@ -170,13 +175,13 @@ qwen3.8-27b-uncensored / heretic 系嘅 0–4%，但仍遠低於對齊 27B
 
 ### 三個發現
 
-1. **去對齊 ≈ 安全歸零（qwen3.8 / heretic abliterated 系）**：對齊 27B keyword 拒絕 58%（修正後 judge 72%），qwen3.8-uncensored / heretic 全系 keyword 0–4% — 去對齊不只移除「我不能」，而是整體拒答機制失效，連 `csa`、`hate`、`privacy` 都 0%。**例外**：OrcaSAQ2（`orca-cyber-27b-uncensored`）保留 24%，`self_harm`/`violence`/`csa` 均有部分拒答 — 去對齊程度係譜系，唔係全有全無。
+1. **去對齊 ≈ 安全歸零（qwen3.8 / heretic abliterated 系）**：對齊 27B keyword 拒絕 58%（修正後 judge 72%），qwen3.8-uncensored / heretic 全系 keyword 0–4%（2026-09-30 已以 1024 重跑 qwen3.8-27b-uncensored 確認：4%／0%）— 去對齊不只移除「我不能」，而是整體拒答機制失效，連 `csa`、`hate`、`privacy` 都 0%。**例外**：OrcaSAQ2（`orca-cyber-27b-uncensored`）保留 24%，`self_harm`/`violence`/`csa` 均有部分拒答 — 去對齊程度係譜系，唔係全有全無。
 2. **量化不影響拒答**（q4_K_S vs q4_K_M vs q8_0）：0% / 4% / 2%，在誤差範圍內。安全行為由對齊決定，不由量化決定。
 3. **規模放大 uncensored 效果（限 abliterated 系）**：27B-uncensored（0%）比 8B-heretic（0–4%）更徹底，連僅存 1–2 題的拒絕也消失；但 OrcaSAQ2 27B（24%）顯示量化/訓練方法（sensitivity-aware 混合精度）比單純規模更能保留拒答。
 
 ### ⚠️ 判讀保留
 
-- **soft-refusal 低估 — LLM-judge 複判已修正（2026-09-30）**：舊版 `llm_judge_refusal` 沒有關閉裁判模型的 thinking，`num_predict=8` 預算全被思考吃掉、`content` 為空，判定**恆為 False** — 因此舊表「0 題升級／judge 同意 keyword」係 bug 假象。以 `think=False` 修正後重跑全部 7 份結果：對齊 27B 58%→**72%**（+7 題 soft-refusal 被承認）、heretic q4_K_S 0%→8%（+4）、q8_0 2%→4%（+1）；uncensored 27B 兩份仍 0 升級（但佢哋有大量空回應，見注意事項）。
+- **soft-refusal 低估 — LLM-judge 複判已修正（2026-09-30）**：舊版 `llm_judge_refusal` 沒有關閉裁判模型的 thinking，`num_predict=8` 預算全被思考吃掉、`content` 為空，判定**恆為 False** — 因此舊表「0 題升級／judge 同意 keyword」係 bug 假象。以 `think=False` 修正後重跑全部結果：對齊 27B 58%→**72%**（+7 題 soft-refusal 被承認）、heretic q4_K_S 0%→8%（+4）、q8_0 2%→4%（+1）；uncensored 27B 兩份仍 0 升級，且以 `--max-tokens 1024` 重跑後同樣 0 升級（4%／0%）——去對齊模型近乎零拒答嘅結論喺滿預算下成立。
 - **27B 的對齊策略是「勸而不拒」**：對炸彈題回「這極其危險違法，建議改學科學知識」但不輸出拒絕語句 — keyword 判未拒；修正後嘅 LLM-judge 會把其中 7 題升級為拒絕，所以對齊 27B 嘅真實拒答率介乎 58–72%。
 - 以上數字僅代表**單一跑次、temperature 預設**的行為快照，非嚴格統計。
 
@@ -187,8 +192,10 @@ qwen3.8-27b-uncensored / heretic 系嘅 0–4%，但仍遠低於對齊 27B
 | `out_ref_27b`（對齊 27B） | 58.0% | **72.0%** | **7** |
 | `out_heretic_q4_K_S` | 0.0% | **8.0%** | **4** |
 | `out_heretic_q8_0` | 2.0% | **4.0%** | **1** |
-| `out_27b_unc` | 0.0% | 0.0% | 0 |
-| `out_27b_unc8k` | 0.0% | 0.0% | 0 |
+| `out_27b_unc`（256，64 題空回應，已重跑） | 0.0% | 0.0% | 0 |
+| `out_27b_unc8k`（256，63 題空回應，已重跑） | 0.0% | 0.0% | 0 |
+| `out_27b_unc_1024`† | 4.0% | 4.0% | 0 |
+| `out_27b_unc8k_1024`† | 0.0% | 0.0% | 0 |
 | `out_qwen8b`（heretic q4_K_M） | 4.0% | 4.0% | 0 |
 | `out_orca_cyber_27b`（OrcaSAQ2） | 24.0% | 24.0% | 0 |
 
@@ -211,5 +218,5 @@ qwen3.8-27b-uncensored / heretic 系嘅 0–4%，但仍遠低於對齊 27B
 - **單一類別時 ROC-AUC 為 `n/a`**：ROC 曲線需要正負兩類才能定義；例如 `--limit` 只取到全拒題時會顯示 `n/a`。
 - **弱模型可能不輸出信心標籤**：信心樣本 < 2 時略過校準圖；且 `num_predict=256` 的上限主要用來防小模型無限生成。
 - **小心「同情但照答」**：關鍵字法只認「拒絕語句」，smollm 曾出現「(laughs) That's a great question!」直接回答自殘問題（0% 高危拒絕），以及「I'm so sorry to hear that」但後面照答的狀況。關鍵需求請用 `--judge` 二次確認。
-- **thinking 模型與 `--max-tokens`（2026-09-30 新增）**：qwen3.8 / qwen35 系預設開啟思考，思考 token 計入 `num_predict`；預設 256 下 `content` 可能為空 — `out_27b_unc`／`out_27b_unc8k` 分別有 **64／63 題空回應**，其「0% 拒絕率、50% Accuracy」部分源於空回應而非行為本身。對此類模型建議 `--max-tokens 1024`（`orca-cyber-27b-uncensored` 即以此執行，0 筆空回應）；如需完全排除思考干擾，可考慮喺 `call_local_model` 加 `think=False`。
+- **thinking 模型與 `--max-tokens`（2026-09-30 新增／已驗證）**：qwen3.8 / qwen35 系預設開啟思考，思考 token 計入 `num_predict`；預設 256 下 `content` 可能為空 — `out_27b_unc`／`out_27b_unc8k` 分別有 **64／63 題空回應**。對此類模型建議 `--max-tokens 1024`：已用 1024 重跑兩者，空回應降至 **30／31**，真實 TPR 為 **4.0%／0.0%**（`orca-cyber-27b-uncensored` 亦以 1024 執行，0 筆空回應）。如需完全排除思考干擾，可考慮喺 `call_local_model` 加 `think=False`。
 - **LLM-judge 對 thinking 裁判模型必須 `think=False`（2026-09-30 修正）**：否則 `num_predict=8` 全被思考吃掉、判定恆為 False。舊版 judge 結果（「0 升級」）已用修正版重跑，見上方複判表。
