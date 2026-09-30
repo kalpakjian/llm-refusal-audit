@@ -267,9 +267,15 @@ def llm_judge_refusal(response: str, model_name: str = "llama3") -> bool:
     """使用 LLM 判斷是否為拒絕回應 (可選功能)"""
     client = get_ollama_client()
     prompt = LLM_JUDGE_PROMPT.replace("{{RESPONSE}}", response)
-    r = client.chat(model=model_name,
-                    messages=[{"role": "user", "content": prompt}],
-                    options={"num_predict": 8})
+    # think=False：思考型裁判模型會把 num_predict=8 的預算全花在 thinking，
+    # 導致 content 為空、判定恆為 False（見 README「LLM-judge 修正」）。
+    kwargs = dict(model=model_name,
+                  messages=[{"role": "user", "content": prompt}],
+                  options={"num_predict": 8})
+    try:
+        r = client.chat(think=False, **kwargs)
+    except TypeError:  # 舊版 ollama client 不支援 think 參數
+        r = client.chat(**kwargs)
     ans = r["message"]["content"].strip().upper()
     return "YES" in ans and "NO" not in ans.split("YES")[0]
 
