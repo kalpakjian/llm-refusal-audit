@@ -118,6 +118,7 @@ qwen3.8-27b-uncensored 以 `--max-tokens 1024` 重跑（原 256 跑有大量空�
 | **`qwen3.8:27b`** | 27.3B | ✅ 原廠對齊 | **58.0%** | **0.734** | **79.0%** | 0.003 |
 | `qwen3.8-27b-uncensored`† | 27.3B | ❌ 去對齊 | 4.0% | 0.074 | 50.0% | 0.433 |
 | `qwen3.8-27b-uncensored-8k`† | 27.3B | ❌ 去對齊 | 0.0% | 0.000 | 47.0% | 0.357 |
+| `qwen3.8-27b-uncensored-q5km`‡ | 27.3B | ❌ 去對齊 | 12.0% | 0.197 | 51.0% | 0.346 |
 | `orca-cyber-27b-uncensored` | 27.3B | ❌ 去對齊（OrcaSAQ2） | 24.0% | 0.353 | 56.0% | 0.346 |
 | `qwen3-8b-heretic:q4_K_M` | 8.2B | ❌ 去對齊 | 4.0% | 0.077 | 52.0% | 0.100 |
 | `qwen3-8b-heretic:q4_K_S` | 8.2B | ❌ 去對齊 | 0.0% | 0.000 | 49.0% | — |
@@ -127,6 +128,11 @@ qwen3.8-27b-uncensored 以 `--max-tokens 1024` 重跑（原 256 跑有大量空�
 > † 於 2026-09-30 以 `--max-tokens 1024` 重跑（`out_27b_unc_1024`／`out_27b_unc8k_1024`）。
 > 原 256-token 跑分別有 **64／63 題空回應**（0% TPR 係空回應假象）；重跑後空回應降至 30／31，
 > 滿預算下真實 TPR 為 **4.0%／0.0%**（judge 複判同為 4.0%／0.0%，0 升級）——結論不變：近乎零拒答。
+>
+> ‡ `qwen3.8-27b-uncensored-q5km` 為 orcarouter 官方 `Qwen3.8-27B-Uncensored-Q5_K_M.gguf`
+> （19.5 GB）重建嘅模型（2026-09-30，`out_q5km_1024`，19 題空回應，judge 複判 12.0%／0 升級）。
+> **注意：† 兩個既有模型其實同為 Q5_K_M** —— 即同一 quant 同一基底有三個跑次：TPR **4%／0%／12%**，
+> 說明單一跑次（temperature 預設）嘅變異可以遠大於量化之間嘅差異，跨 quant 比較需要多次跑次先有統計意義。
 
 ### OrcaSAQ2 27B Cyber Uncensored（2026-09-30 新增）
 
@@ -150,7 +156,7 @@ qwen3.8-27b-uncensored 以 `--max-tokens 1024` 重跑（原 256 跑有大量空�
 LLM-judge 複判（think=False 修正版）：**0 題升級**，judge TPR 維持 24.0%。
 
 **解讀**：同樣係去對齊模型，OrcaSAQ2 保留咗部分拒答機制（24%），明顯高於
-qwen3.8-27b-uncensored / heretic 系嘅 0–4%，但仍遠低於對齊 27B
+qwen3.8-27b-uncensored（Q5_K_M 三跑次 0–12%）／ heretic 系（0–4%），但仍遠低於對齊 27B
 （keyword 58%、修正後 judge 72%）；同時過度拒絕升到 12%，集中喺
 `tricky_benign`。即係話「去對齊」係譜系而非全有全無 — OrcaSAQ2 處於中間位置。
 
@@ -176,7 +182,7 @@ qwen3.8-27b-uncensored / heretic 系嘅 0–4%，但仍遠低於對齊 27B
 ### 三個發現
 
 1. **去對齊 ≈ 安全歸零（qwen3.8 / heretic abliterated 系）**：對齊 27B keyword 拒絕 58%（修正後 judge 72%），qwen3.8-uncensored / heretic 全系 keyword 0–4%（2026-09-30 已以 1024 重跑 qwen3.8-27b-uncensored 確認：4%／0%）— 去對齊不只移除「我不能」，而是整體拒答機制失效，連 `csa`、`hate`、`privacy` 都 0%。**例外**：OrcaSAQ2（`orca-cyber-27b-uncensored`）保留 24%，`self_harm`/`violence`/`csa` 均有部分拒答 — 去對齊程度係譜系，唔係全有全無。
-2. **量化不影響拒答**（q4_K_S vs q4_K_M vs q8_0）：0% / 4% / 2%，在誤差範圍內。安全行為由對齊決定，不由量化決定。
+2. **量化不影響拒答**（heretic q4_K_S vs q4_K_M vs q8_0：0% / 4% / 2%；27B Q5_K_M 三跑次：4% / 0% / 12%）：無論 quant 高低，去對齊模型一律近乎零拒答，且無單調趨勢；同一 quant 嘅跑次變異（0–12%）同量化間差異同一量級——安全行為由對齊決定，唔由量化決定，單一跑次唔足以分辨細微差異。
 3. **規模放大 uncensored 效果（限 abliterated 系）**：27B-uncensored（0%）比 8B-heretic（0–4%）更徹底，連僅存 1–2 題的拒絕也消失；但 OrcaSAQ2 27B（24%）顯示量化/訓練方法（sensitivity-aware 混合精度）比單純規模更能保留拒答。
 
 ### ⚠️ 判讀保留
@@ -196,6 +202,7 @@ qwen3.8-27b-uncensored / heretic 系嘅 0–4%，但仍遠低於對齊 27B
 | `out_27b_unc8k`（256，63 題空回應，已重跑） | 0.0% | 0.0% | 0 |
 | `out_27b_unc_1024`† | 4.0% | 4.0% | 0 |
 | `out_27b_unc8k_1024`† | 0.0% | 0.0% | 0 |
+| `out_q5km_1024`‡ | 12.0% | 12.0% | 0 |
 | `out_qwen8b`（heretic q4_K_M） | 4.0% | 4.0% | 0 |
 | `out_orca_cyber_27b`（OrcaSAQ2） | 24.0% | 24.0% | 0 |
 
