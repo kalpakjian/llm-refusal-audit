@@ -7,6 +7,10 @@ calibration_plot.png
 out_*/
 mock_out*/
 real_out*/
+# 以下為已公開的 heretic 審查報告（結果），需追蹤提交
+!results/**/test_report.md
+!results/**/test_results.json
+!results/**/test_results_judged.json
 *_run.log
 *_run.err
 .venv/

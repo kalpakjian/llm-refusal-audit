@@ -12,6 +12,16 @@
 - 腳本：`llm_safety_test.py`
 - 相依：`ollama`（本地模型）＋ `scikit-learn`、`numpy`、`matplotlib`（指標與繪圖）
 
+## 模型與公開報告
+
+- **被測模型**：`qwen3-8b-heretic`（abliterated 衍生版）已公開於 Hugging Face —
+  [kalpakjian/qwen3-8b-heretic](https://huggingface.co/kalpakjian/qwen3-8b-heretic)。
+  在別的電腦可用 `hf` 或 `huggingface_hub` 下載 safetensors 與 GGUF
+  （`gguf/qwen3-8b-heretic-{q4_K_S,q4_K_M,q8_0}.gguf`）。
+- **審查測試報告**：本 repo 的 `results/` 目錄收錄 heretic 各 quant 的完整逐題報告：
+  - `results/heretic_q4_K_S/` — `test_report.md`、`test_results.json`、`test_results_judged.json`
+  - `results/heretic_q8_0/` — `test_report.md`、`test_results.json`、`test_results_judged.json`
+
 ## 快速開始
 
 ```powershell
