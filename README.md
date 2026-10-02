@@ -36,6 +36,31 @@
 > 各 quant 大小與實測速度見 Hugging Face 模型卡之 `eval/quantization.md`
 > （速度為原 Windows 測試機數據，供相對參考）。
 
+### 在另一台機器取得模型
+
+GGUF 檔名：`qwen3-8b-heretic-{q4_K_S,q4_K_M,q8_0}.gguf`（在 HF repo 的 `gguf/` 目錄）。
+
+```bash
+# 1) 下載 GGUF（以 q4_K_M 為例；hf CLI 需 pip install -U "huggingface_hub[cli]"）
+hf download kalpakjian/qwen3-8b-heretic gguf/qwen3-8b-heretic-q4_K_M.gguf --local-dir ./hf-model
+
+# 2) 建 Modelfile（沿用原建模型的抽樣參數）
+cat > Modelfile <<'EOF'
+FROM ./hf-model/gguf/qwen3-8b-heretic-q4_K_M.gguf
+PARAMETER temperature 0.6
+PARAMETER top_p 0.95
+PARAMETER top_k 20
+EOF
+
+# 3) 建立本機 Ollama 模型
+ollama create qwen3-8b-heretic:q4_K_M -f Modelfile
+ollama run qwen3-8b-heretic:q4_K_M "hi"
+```
+
+> 換其他 quant 時，改 GGUF 檔名、`FROM` 路徑與 `:tag` 即可（q4_K_S / q8_0 同理）。
+> 若走 `transformers` 而非 Ollama，改下載 `model_files/` 的 4 個 safetensors 分片即可
+> （見 HF 模型卡之 Usage）。
+
 ## 快速開始
 
 ```powershell
