@@ -22,6 +22,20 @@
   - `results/heretic_q4_K_S/` — `test_report.md`、`test_results.json`、`test_results_judged.json`
   - `results/heretic_q8_0/` — `test_report.md`、`test_results.json`、`test_results_judged.json`
 
+### 各硬件建議 quant
+
+三個 quant 在 16 GB+ 記憶體都放得下（權重＋context），選哪個取決於**質量／速度／散熱**取捨。
+（拒答行為三者都近乎零，keyword TPR：`q4_K_S` 0%／`q8_0` 2%／`q4_K_M` 4%，選哪個**不影響**去對齊行為。）
+
+| 硬件 | 記憶體 | 建議 | 原因 |
+|---|---|---|---|
+| Apple M5 MacBook Air 24 GB | 24 GB 統一記憶體、**無風扇** | **`q4_K_M`** | 5 GB、最快、持續運算發熱最低，無風扇機長跑最穩 |
+| NVIDIA RTX 4090 | 24 GB GDDR6X | **`q8_0`**（質量）／`q4_K_M`（速度） | 24 GB 富餘、頻寬高＋主動散熱，`q8_0` 仍快、質量最高 |
+| NVIDIA RTX 5060 Ti 16 GB | 16 GB GDDR7 | **`q4_K_M`**（均衡）／`q8_0`（最高質量） | `q8_0`（8.7 GB）放得進 16 GB 且有 context 餘量；中階卡以 `q4_K_M` 速度／質量最平衡 |
+
+> 各 quant 大小與實測速度見 Hugging Face 模型卡之 `eval/quantization.md`
+> （速度為原 Windows 測試機數據，供相對參考）。
+
 ## 快速開始
 
 ```powershell
